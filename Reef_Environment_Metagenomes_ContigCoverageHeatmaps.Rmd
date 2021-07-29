@@ -1,0 +1,893 @@
+---
+title: "Step8.5_DASTool_ReadCounts"
+author: "Sofia Roitman"
+date: "4/5/2021"
+output: html_document
+---
+
+# Set working directory
+```{r}
+setwd("Step7_ContigHeatmap_DASTool/")
+```
+
+# Load in data files
+```{r}
+# Idxstats file, 1 per sample
+# Contains: contig name, length, # reads mapped, # reads unmapped
+RS1 = read.table("all_RS1_aln.sam.bam.sorted.bam.idxstats")
+RS2 = read.table("all_RS2_aln.sam.bam.sorted.bam.idxstats")
+RS3 = read.table("all_RS3_aln.sam.bam.sorted.bam.idxstats")
+RSW1 = read.table("all_RSW1_aln.sam.bam.sorted.bam.idxstats")
+RSW3 = read.table("all_RSW3_aln.sam.bam.sorted.bam.idxstats")
+RSW4 = read.table("all_RSW4_aln.sam.bam.sorted.bam.idxstats")
+VS1 = read.table("all_VS1_aln.sam.bam.sorted.bam.idxstats")
+VS2 = read.table("all_VS2_aln.sam.bam.sorted.bam.idxstats")
+VS3 = read.table("all_VS3_aln.sam.bam.sorted.bam.idxstats")
+VSW1 = read.table("all_VSW1_aln.sam.bam.sorted.bam.idxstats")
+VSW2 = read.table("all_VSW2_aln.sam.bam.sorted.bam.idxstats")
+VSW5 = read.table("all_VSW5_aln.sam.bam.sorted.bam.idxstats")
+VDW1 = read.table("all_VS1_aln.sam.bam.sorted.bam.idxstats")
+VDW2 = read.table("all_VS2_aln.sam.bam.sorted.bam.idxstats")
+VDW3 = read.table("all_VS3_aln.sam.bam.sorted.bam.idxstats")
+
+# Bin files
+# List of contigs sorted into certain bins
+bins <- list()
+bins[[1]] = read.table("CONCOCT_104_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[2]] = read.table("CONCOCT_106.fa.fai", stringsAsFactors = FALSE)
+bins[[3]] = read.table("CONCOCT_112_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[4]] = read.table("CONCOCT_128_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[5]] = read.table("CONCOCT_137.fa.fai", stringsAsFactors = FALSE)
+bins[[6]] = read.table("CONCOCT_13_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[7]] = read.table("CONCOCT_140_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[8]] = read.table("CONCOCT_143_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[9]] = read.table("CONCOCT_145_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[10]] = read.table("CONCOCT_146_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[11]] = read.table("CONCOCT_157.fa.fai", stringsAsFactors = FALSE)
+bins[[12]] = read.table("CONCOCT_162_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[13]] = read.table("CONCOCT_172.fa.fai", stringsAsFactors = FALSE)
+bins[[14]] = read.table("CONCOCT_179_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[15]] = read.table("CONCOCT_185.fa.fai", stringsAsFactors = FALSE)
+bins[[16]] = read.table("CONCOCT_186.fa.fai", stringsAsFactors = FALSE)
+bins[[17]] = read.table("CONCOCT_194.fa.fai", stringsAsFactors = FALSE)
+bins[[18]] = read.table("CONCOCT_196_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[19]] = read.table("CONCOCT_19_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[20]] = read.table("CONCOCT_200.fa.fai", stringsAsFactors = FALSE)
+bins[[21]] = read.table("CONCOCT_204_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[22]] = read.table("CONCOCT_207.fa.fai", stringsAsFactors = FALSE)
+bins[[23]] = read.table("CONCOCT_20.fa.fai", stringsAsFactors = FALSE)
+bins[[24]] = read.table("CONCOCT_221_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[25]] = read.table("CONCOCT_22_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[26]] = read.table("CONCOCT_231.fa.fai", stringsAsFactors = FALSE)
+bins[[27]] = read.table("CONCOCT_35_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[28]] = read.table("CONCOCT_4.fa.fai", stringsAsFactors = FALSE)
+bins[[29]] = read.table("CONCOCT_55.fa.fai", stringsAsFactors = FALSE)
+bins[[30]] = read.table("CONCOCT_65_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[31]] = read.table("CONCOCT_69_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[32]] = read.table("CONCOCT_76_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[33]] = read.table("CONCOCT_78.fa.fai", stringsAsFactors = FALSE)
+bins[[34]] = read.table("CONCOCT_85.fa.fai", stringsAsFactors = FALSE)
+bins[[35]] = read.table("CONCOCT_87.fa.fai", stringsAsFactors = FALSE)
+bins[[36]] = read.table("CONCOCT_91.fa.fai", stringsAsFactors = FALSE)
+bins[[37]] = read.table("CONCOCT_93.fa.fai", stringsAsFactors = FALSE)
+bins[[38]] = read.table("CONCOCT_94_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[39]] = read.table("METABAT_104.fa.fai", stringsAsFactors = FALSE)
+bins[[40]] = read.table("METABAT_107.fa.fai", stringsAsFactors = FALSE)
+bins[[41]] = read.table("METABAT_109_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[42]] = read.table("METABAT_111_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[43]] = read.table("METABAT_112.fa.fai", stringsAsFactors = FALSE)
+bins[[44]] = read.table("METABAT_113.fa.fai", stringsAsFactors = FALSE)
+bins[[45]] = read.table("METABAT_116_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[46]] = read.table("METABAT_11_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[47]] = read.table("METABAT_121.fa.fai", stringsAsFactors = FALSE)
+bins[[48]] = read.table("METABAT_124.fa.fai", stringsAsFactors = FALSE)
+bins[[49]] = read.table("METABAT_126.fa.fai", stringsAsFactors = FALSE)
+bins[[50]] = read.table("METABAT_130.fa.fai", stringsAsFactors = FALSE)
+bins[[51]] = read.table("METABAT_131_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[52]] = read.table("METABAT_134.fa.fai", stringsAsFactors = FALSE)
+bins[[53]] = read.table("METABAT_141.fa.fai", stringsAsFactors = FALSE)
+bins[[54]] = read.table("METABAT_142.fa.fai", stringsAsFactors = FALSE)
+bins[[55]] = read.table("METABAT_146.fa.fai", stringsAsFactors = FALSE)
+bins[[56]] = read.table("METABAT_148.fa.fai", stringsAsFactors = FALSE)
+bins[[57]] = read.table("METABAT_152.fa.fai", stringsAsFactors = FALSE)
+bins[[58]] = read.table("METABAT_162.fa.fai", stringsAsFactors = FALSE)
+bins[[59]] = read.table("METABAT_163.fa.fai", stringsAsFactors = FALSE)
+bins[[60]] = read.table("METABAT_16.fa.fai", stringsAsFactors = FALSE)
+bins[[61]] = read.table("METABAT_173.fa.fai", stringsAsFactors = FALSE)
+bins[[62]] = read.table("METABAT_17.fa.fai", stringsAsFactors = FALSE)
+bins[[63]] = read.table("METABAT_182.fa.fai", stringsAsFactors = FALSE)
+bins[[64]] = read.table("METABAT_183.fa.fai", stringsAsFactors = FALSE)
+bins[[65]] = read.table("METABAT_187.fa.fai", stringsAsFactors = FALSE)
+bins[[66]] = read.table("METABAT_188.fa.fai", stringsAsFactors = FALSE)
+bins[[67]] = read.table("METABAT_191.fa.fai", stringsAsFactors = FALSE)
+bins[[68]] = read.table("METABAT_193.fa.fai", stringsAsFactors = FALSE)
+bins[[69]] = read.table("METABAT_195.fa.fai", stringsAsFactors = FALSE)
+bins[[70]] = read.table("METABAT_201.fa.fai", stringsAsFactors = FALSE)
+bins[[71]] = read.table("METABAT_203.fa.fai", stringsAsFactors = FALSE)
+bins[[72]] = read.table("METABAT_20_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[73]] = read.table("METABAT_210_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[74]] = read.table("METABAT_211.fa.fai", stringsAsFactors = FALSE)
+bins[[75]] = read.table("METABAT_213_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[76]] = read.table("METABAT_218.fa.fai", stringsAsFactors = FALSE)
+bins[[77]] = read.table("METABAT_221.fa.fai", stringsAsFactors = FALSE)
+bins[[78]] = read.table("METABAT_222.fa.fai", stringsAsFactors = FALSE)
+bins[[79]] = read.table("METABAT_22.fa.fai", stringsAsFactors = FALSE)
+bins[[80]] = read.table("METABAT_232.fa.fai", stringsAsFactors = FALSE)
+bins[[81]] = read.table("METABAT_233.fa.fai", stringsAsFactors = FALSE)
+bins[[82]] = read.table("METABAT_240.fa.fai", stringsAsFactors = FALSE)
+bins[[83]] = read.table("METABAT_246.fa.fai", stringsAsFactors = FALSE)
+bins[[84]] = read.table("METABAT_248.fa.fai", stringsAsFactors = FALSE)
+bins[[85]] = read.table("METABAT_24.fa.fai", stringsAsFactors = FALSE)
+bins[[86]] = read.table("METABAT_250.fa.fai", stringsAsFactors = FALSE)
+bins[[87]] = read.table("METABAT_252.fa.fai", stringsAsFactors = FALSE)
+bins[[88]] = read.table("METABAT_253.fa.fai", stringsAsFactors = FALSE)
+bins[[89]] = read.table("METABAT_25.fa.fai", stringsAsFactors = FALSE)
+bins[[90]] = read.table("METABAT_260.fa.fai", stringsAsFactors = FALSE)
+bins[[91]] = read.table("METABAT_265.fa.fai", stringsAsFactors = FALSE)
+bins[[92]] = read.table("METABAT_266.fa.fai", stringsAsFactors = FALSE)
+bins[[93]] = read.table("METABAT_268.fa.fai", stringsAsFactors = FALSE)
+bins[[94]] = read.table("METABAT_269.fa.fai", stringsAsFactors = FALSE)
+bins[[95]] = read.table("METABAT_26.fa.fai", stringsAsFactors = FALSE)
+bins[[96]] = read.table("METABAT_270.fa.fai", stringsAsFactors = FALSE)
+bins[[97]] = read.table("METABAT_273.fa.fai", stringsAsFactors = FALSE)
+bins[[98]] = read.table("METABAT_280.fa.fai", stringsAsFactors = FALSE)
+bins[[99]] = read.table("METABAT_282.fa.fai", stringsAsFactors = FALSE)
+bins[[100]] = read.table("METABAT_285.fa.fai", stringsAsFactors = FALSE)
+bins[[101]] = read.table("METABAT_286.fa.fai", stringsAsFactors = FALSE)
+bins[[102]] = read.table("METABAT_287.fa.fai", stringsAsFactors = FALSE)
+bins[[103]] = read.table("METABAT_290.fa.fai", stringsAsFactors = FALSE)
+bins[[104]] = read.table("METABAT_296.fa.fai", stringsAsFactors = FALSE)
+bins[[105]] = read.table("METABAT_297.fa.fai", stringsAsFactors = FALSE)
+bins[[106]] = read.table("METABAT_298.fa.fai", stringsAsFactors = FALSE)
+bins[[107]] = read.table("METABAT_305.fa.fai", stringsAsFactors = FALSE)
+bins[[108]] = read.table("METABAT_312.fa.fai", stringsAsFactors = FALSE)
+bins[[109]] = read.table("METABAT_317.fa.fai", stringsAsFactors = FALSE)
+bins[[110]] = read.table("METABAT_31.fa.fai", stringsAsFactors = FALSE)
+bins[[111]] = read.table("METABAT_324.fa.fai", stringsAsFactors = FALSE)
+bins[[112]] = read.table("METABAT_325.fa.fai", stringsAsFactors = FALSE)
+bins[[113]] = read.table("METABAT_331.fa.fai", stringsAsFactors = FALSE)
+bins[[114]] = read.table("METABAT_336.fa.fai", stringsAsFactors = FALSE)
+bins[[115]] = read.table("METABAT_348.fa.fai", stringsAsFactors = FALSE)
+bins[[116]] = read.table("METABAT_353.fa.fai", stringsAsFactors = FALSE)
+bins[[117]] = read.table("METABAT_354.fa.fai", stringsAsFactors = FALSE)
+bins[[118]] = read.table("METABAT_357.fa.fai", stringsAsFactors = FALSE)
+bins[[119]] = read.table("METABAT_35.fa.fai", stringsAsFactors = FALSE)
+bins[[120]] = read.table("METABAT_361.fa.fai", stringsAsFactors = FALSE)
+bins[[121]] = read.table("METABAT_367.fa.fai", stringsAsFactors = FALSE)
+bins[[122]] = read.table("METABAT_37.fa.fai", stringsAsFactors = FALSE)
+bins[[123]] = read.table("METABAT_38.fa.fai", stringsAsFactors = FALSE)
+bins[[124]] = read.table("METABAT_40.fa.fai", stringsAsFactors = FALSE)
+bins[[125]] = read.table("METABAT_41_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[126]] = read.table("METABAT_46.fa.fai", stringsAsFactors = FALSE)
+bins[[127]] = read.table("METABAT_48_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[128]] = read.table("METABAT_4.fa.fai", stringsAsFactors = FALSE)
+bins[[129]] = read.table("METABAT_56_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[130]] = read.table("METABAT_58_sub.fa.fai", stringsAsFactors = FALSE)
+bins[[131]] = read.table("METABAT_61.fa.fai", stringsAsFactors = FALSE)
+bins[[132]] = read.table("METABAT_63.fa.fai", stringsAsFactors = FALSE)
+bins[[133]] = read.table("METABAT_65.fa.fai", stringsAsFactors = FALSE)
+bins[[134]] = read.table("METABAT_68.fa.fai", stringsAsFactors = FALSE)
+bins[[135]] = read.table("METABAT_69.fa.fai", stringsAsFactors = FALSE)
+bins[[136]] = read.table("METABAT_71.fa.fai", stringsAsFactors = FALSE)
+bins[[137]] = read.table("METABAT_72.fa.fai", stringsAsFactors = FALSE)
+bins[[138]] = read.table("METABAT_73.fa.fai", stringsAsFactors = FALSE)
+bins[[139]] = read.table("METABAT_7.fa.fai", stringsAsFactors = FALSE)
+bins[[140]] = read.table("METABAT_86.fa.fai", stringsAsFactors = FALSE)
+bins[[141]] = read.table("METABAT_87.fa.fai", stringsAsFactors = FALSE)
+bins[[142]] = read.table("METABAT_99.fa.fai", stringsAsFactors = FALSE)
+
+
+```
+
+
+# Merging groups and adding row names
+```{r}
+# First, look at uploaded files and see if they all have the same contigs in the same order
+all(RS1[,1] == RS2[,1])
+all(RS1[,1] == RS3[,1])
+all(RS1[,1] == VS2[,1])
+
+# They do! What we want is a list of contigs and then the number of mapped reads from each sample for that contig in matrix form. To do that:
+## Merge using cbind. Only merging column 3 from each sample because that is the column with the read counts
+idxstats_merged = cbind(RS1=RS1[,3],RS2=RS2[,3],RS3=RS3[,3],RSW1=RSW1[,3],RSW3=RSW3[,3],RSW4=RSW4[,3],VS1=VS1[,3],VS2=VS2[,3],VS3=VS3[,3],VSW1=VSW1[,3],VSW2=VSW2[,3],VSW5=VSW5[,3],VDW1=VDW1[,3],VDW2=VDW2[,3],VDW3=VDW3[,3])
+
+## Add rownames. Since all the files have the same contigs in the same order, all we have to do is insert the names from one of the samples
+rownames(idxstats_merged) = RS1[,1]
+
+idxstats_merged_2 = read.table("all_2500-COVs.txt",row.names = 1)
+
+```
+
+
+# Sum contig lengths by bin
+```{r}
+# Create object with sums of contig lengths for each bin in vector
+bin_lengths = vector()
+for (i in 1:142) {
+  bin_lengths[i] = as.vector(sum(bins[[i]]$V2))
+}
+
+bin_lengths[5] = as.vector(sum(bins[[i]]$V2))
+
+bin_lengths
+```
+
+
+# Create coverage matrix
+```{r}
+bins_cov = list()
+for (i in 1:142) {
+  bins_cov[[i]] = colSums(idxstats_merged_2[bins[[i]][,1],]) / bin_lengths[i]
+}
+
+bins_cov
+
+# Returns list with % coverage for each sample by bin
+
+# Combine into one matrix
+coverage_matrix = do.call(rbind,bins_cov)
+
+
+min(coverage_matrix[,1])
+min(coverage_matrix[,2])
+min(coverage_matrix[,3])
+min(coverage_matrix[,4])
+min(coverage_matrix[,5])
+min(coverage_matrix[,6])
+```
+
+
+# Heatmap
+```{r}
+# Basic
+pheatmap(coverage_matrix)
+
+first_heatmap <- pheatmap(coverage_matrix)
+
+pdf("first_heatmap.pdf",width=9,height=5)
+first_heatmap
+dev.off()
+
+# Try taking the log (adding a pseudocount to avoid log(0))
+
+## Define function
+logpseudo <- function(x) {
+
+    log10(x + min(x[x>0], na.rm = TRUE)/2)
+
+}
+
+# Take the log of the matrix 
+log_cov <- logpseudo(coverage_matrix)
+
+# Plot
+pheatmap(log_cov)
+
+log_heatmap <- pheatmap(log_cov)
+
+pdf("log_heatmap.pdf",width=9,height=5)
+log_heatmap
+dev.off()
+
+```
+
+
+
+# Add sample categories
+```{r}
+my_sample_col <- data.frame(sample = rep(c("Rosario", "Varadero"), c(3,3)))
+row.names(my_sample_col) <- colnames(coverage_matrix)
+
+my_sample_col <- data.frame(sample = rep(c("Rosario_sediment","Rosario_surfacewater","Varadero_deepwater","Varadero_sediment","Varadero_surfacewater"), c(3,3,3,3,3)))
+row.names(my_sample_col) <- colnames(coverage_matrix)
+sample_colors = list(
+    SampleType = c(Varadero_deepwater = "palegreen4", Rosario_surfacewater = "#00B0F0", Varadero_surfacewater = "#FFC000", Varadero_sediment = "khaki4", Rosario_sediment = "slategray")
+)
+
+my_sample_rows <- read.table("dastool_bin_taxonomy_order_binnamesedited.txt",row.names = 1, col.names = "Order")
+rows_ordered <- log_cov[rownames(my_sample_rows), ]
+
+my_sample_rows_phylum <- read.table("dastool_bin_taxonomy_phylum.txt",row.names = 1, col.names = "Phylum")
+rows_ordered_phylum <- log_cov[rownames(my_sample_rows_phylum), ]
+
+dastool_phylum_70mag_10red <- read.table("dastool_bin_phylum_70mag_less10red_noNone.txt",row.names = 1, col.names = "Phylum")
+dastool_phylum_70mag_20red <- read.table("dastool_bin_phylum_70mag_less10red_noNone.txt",row.names = 1, col.names = "Phylum")
+
+bin_list <- read.table("dastool_binlist.txt")
+rownames(coverage_matrix) = bin_list$V1
+rownames(log_cov) = bin_list$V1
+
+heatmap_order <- pheatmap(rows_ordered, 
+                       annotation_col = my_sample_col, 
+                       annotation_row = my_sample_rows, 
+                       cluster_rows = FALSE, 
+                       labels_row = FALSE, 
+                       cutree_cols = 5, 
+                       fontsize = 7, 
+                       treeheight_col = 40, 
+                       show_colnames = F, 
+                       legend = F,
+                       cellwidth = 7,
+                       cellheight = 4)
+pdf("heatmap_order.pdf",width=50,height=60)
+heatmap_order
+dev.off()
+
+```
+
+# Try again, but now removing bins with less than 70% completion and a certain amount of redundancy
+## 70% completion, no "None" for taxonomy
+### less than 20% redundancy
+```{r}
+# Bin files
+# List of contigs sorted into certain bins
+bins_70comp_less20red <- list()
+
+#bins[[75]] = read.table(filename,stringsAsFactors = FALSE)
+
+
+bins_70comp_less20red[[1]] = read.table("CONCOCT_104_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[2]] = read.table("CONCOCT_106.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[3]] = read.table("CONCOCT_112_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[4]] = read.table("CONCOCT_128_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[5]] = read.table("CONCOCT_137.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[6]] = read.table("CONCOCT_13_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[7]] = read.table("CONCOCT_140_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[8]] = read.table("CONCOCT_143_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[9]] = read.table("CONCOCT_145_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[10]] = read.table("CONCOCT_146_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[11]] = read.table("CONCOCT_157.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[12]] = read.table("CONCOCT_162_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[13]] = read.table("CONCOCT_172.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[14]] = read.table("CONCOCT_179_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[15]] = read.table("CONCOCT_185.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[16]] = read.table("CONCOCT_186.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[17]] = read.table("CONCOCT_194.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[18]] = read.table("CONCOCT_196_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[19]] = read.table("CONCOCT_19_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[20]] = read.table("CONCOCT_200.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[21]] = read.table("CONCOCT_204_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[22]] = read.table("CONCOCT_207.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[23]] = read.table("CONCOCT_20.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[24]] = read.table("CONCOCT_22_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[25]] = read.table("CONCOCT_231.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[26]] = read.table("CONCOCT_35_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[27]] = read.table("CONCOCT_4.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[28]] = read.table("CONCOCT_65_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[29]] = read.table("CONCOCT_69_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[30]] = read.table("CONCOCT_76_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[31]] = read.table("CONCOCT_78.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[32]] = read.table("CONCOCT_85.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[33]] = read.table("CONCOCT_87.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[34]] = read.table("CONCOCT_91.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[35]] = read.table("CONCOCT_93.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[36]] = read.table("CONCOCT_94_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[37]] = read.table("METABAT_104.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[38]] = read.table("METABAT_107.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[39]] = read.table("METABAT_111_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[40]] = read.table("METABAT_112.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[41]] = read.table("METABAT_113.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[42]] = read.table("METABAT_116_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[43]] = read.table("METABAT_11_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[44]] = read.table("METABAT_124.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[45]] = read.table("METABAT_126.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[46]] = read.table("METABAT_130.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[47]] = read.table("METABAT_131_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[48]] = read.table("METABAT_142.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[49]] = read.table("METABAT_146.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[50]] = read.table("METABAT_148.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[51]] = read.table("METABAT_152.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[52]] = read.table("METABAT_163.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[53]] = read.table("METABAT_16.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[54]] = read.table("METABAT_173.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[55]] = read.table("METABAT_17.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[56]] = read.table("METABAT_182.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[57]] = read.table("METABAT_183.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[58]] = read.table("METABAT_187.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[59]] = read.table("METABAT_188.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[60]] = read.table("METABAT_191.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[61]] = read.table("METABAT_193.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[62]] = read.table("METABAT_195.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[63]] = read.table("METABAT_201.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[64]] = read.table("METABAT_203.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[65]] = read.table("METABAT_20_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[66]] = read.table("METABAT_210_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[67]] = read.table("METABAT_211.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[68]] = read.table("METABAT_213_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[69]] = read.table("METABAT_218.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[70]] = read.table("METABAT_222.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[71]] = read.table("METABAT_22.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[72]] = read.table("METABAT_233.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[73]] = read.table("METABAT_240.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[74]] = read.table("METABAT_246.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[75]] = read.table("METABAT_248.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[76]] = read.table("METABAT_24.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[77]] = read.table("METABAT_250.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[78]] = read.table("METABAT_252.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[79]] = read.table("METABAT_253.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[80]] = read.table("METABAT_25.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[81]] = read.table("METABAT_260.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[82]] = read.table("METABAT_265.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[83]] = read.table("METABAT_266.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[84]] = read.table("METABAT_268.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[85]] = read.table("METABAT_269.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[86]] = read.table("METABAT_26.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[87]] = read.table("METABAT_270.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[88]] = read.table("METABAT_273.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[89]] = read.table("METABAT_280.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[90]] = read.table("METABAT_282.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[91]] = read.table("METABAT_285.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[92]] = read.table("METABAT_286.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[93]] = read.table("METABAT_287.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[94]] = read.table("METABAT_290.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[95]] = read.table("METABAT_296.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[96]] = read.table("METABAT_297.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[97]] = read.table("METABAT_298.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[98]] = read.table("METABAT_305.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[99]] = read.table("METABAT_312.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[100]] = read.table("METABAT_317.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[101]] = read.table("METABAT_31.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[102]] = read.table("METABAT_324.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[103]] = read.table("METABAT_325.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[104]] = read.table("METABAT_331.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less20red[[105]] = read.table("METABAT_336.fa.fai", stringsAsFactors = FALSE)
+
+```
+
+
+### less than 10% redundancy
+```{r}
+# Bin files
+# List of contigs sorted into certain bins
+bins_70comp_less10red <- list()
+
+#bins[[75]] = read.table(filename,stringsAsFactors = FALSE)
+
+
+bins_70comp_less10red[[1]] = read.table("CONCOCT_104_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[2]] = read.table("CONCOCT_106.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[3]] = read.table("CONCOCT_112_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[4]] = read.table("CONCOCT_13_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[5]] = read.table("CONCOCT_137.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[6]] = read.table("CONCOCT_146_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[7]] = read.table("CONCOCT_162_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[8]] = read.table("CONCOCT_186.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[9]] = read.table("CONCOCT_194.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[10]] = read.table("CONCOCT_196_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[11]] = read.table("CONCOCT_20.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[12]] = read.table("CONCOCT_200.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[13]] = read.table("CONCOCT_204_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[14]] = read.table("CONCOCT_207.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[15]] = read.table("CONCOCT_22_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[16]] = read.table("CONCOCT_231.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[17]] = read.table("CONCOCT_35_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[18]] = read.table("CONCOCT_78.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[19]] = read.table("CONCOCT_85.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[20]] = read.table("CONCOCT_93.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[21]] = read.table("CONCOCT_94_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[22]] = read.table("METABAT_107.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[23]] = read.table("METABAT_11_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[24]] = read.table("METABAT_111_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[25]] = read.table("METABAT_112.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[26]] = read.table("METABAT_113.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[27]] = read.table("METABAT_121.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[28]] = read.table("METABAT_124.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[29]] = read.table("METABAT_130.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[30]] = read.table("METABAT_131_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[31]] = read.table("METABAT_142.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[32]] = read.table("METABAT_148.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[33]] = read.table("METABAT_152.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[34]] = read.table("METABAT_16.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[35]] = read.table("METABAT_163.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[36]] = read.table("METABAT_17.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[37]] = read.table("METABAT_173.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[38]] = read.table("METABAT_182.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[39]] = read.table("METABAT_183.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[40]] = read.table("METABAT_187.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[41]] = read.table("METABAT_188.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[42]] = read.table("METABAT_191.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[43]] = read.table("METABAT_193.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[44]] = read.table("METABAT_195.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[45]] = read.table("METABAT_201.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[46]] = read.table("METABAT_213_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[47]] = read.table("METABAT_222.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[48]] = read.table("METABAT_232.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[49]] = read.table("METABAT_246.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[50]] = read.table("METABAT_25.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[51]] = read.table("METABAT_252.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[52]] = read.table("METABAT_253.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[53]] = read.table("METABAT_260.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[54]] = read.table("METABAT_266.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[55]] = read.table("METABAT_268.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[56]] = read.table("METABAT_269.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[57]] = read.table("METABAT_282.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[58]] = read.table("METABAT_285.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[59]] = read.table("METABAT_290.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[60]] = read.table("METABAT_296.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[61]] = read.table("METABAT_297.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[62]] = read.table("METABAT_298.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[63]] = read.table("METABAT_31.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[64]] = read.table("METABAT_312.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[65]] = read.table("METABAT_324.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[66]] = read.table("METABAT_331.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[67]] = read.table("METABAT_336.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[68]] = read.table("METABAT_348.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[69]] = read.table("METABAT_35.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[70]] = read.table("METABAT_353.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[71]] = read.table("METABAT_354.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[72]] = read.table("METABAT_357.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[73]] = read.table("METABAT_361.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[74]] = read.table("METABAT_367.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[75]] = read.table("METABAT_4.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[76]] = read.table("METABAT_40.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[77]] = read.table("METABAT_46.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[78]] = read.table("METABAT_58_sub.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[79]] = read.table("METABAT_61.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[80]] = read.table("METABAT_63.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[81]] = read.table("METABAT_68.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[82]] = read.table("METABAT_69.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[83]] = read.table("METABAT_71.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[84]] = read.table("METABAT_72.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[85]] = read.table("METABAT_73.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[86]] = read.table("METABAT_86.fa.fai", stringsAsFactors = FALSE)
+bins_70comp_less10red[[87]] = read.table("METABAT_99.fa.fai", stringsAsFactors = FALSE)
+
+```
+
+
+## Sum contig lengths by bin, then make a coverage table
+### 20%
+```{r}
+# Create object with sums of contig lengths for each bin in vector
+bin_lengths_less20red = vector()
+for (i in 1:105) {
+  bin_lengths_less20red[i] = as.vector(sum(bins_70comp_less20red[[i]]$V2))
+}
+
+bin_lengths_less20red[5] = as.vector(sum(bins_70comp_less20red[[i]]$V2))
+
+bin_lengths_less20red
+
+# Make coverage table
+bins_cov_less20red = list()
+for (i in 1:105) {
+  bins_cov_less20red[[i]] = colSums(idxstats_merged_2[bins_70comp_less20red[[i]][,1],]) / bin_lengths_less20red[i]
+}
+
+bins_cov_less20red
+
+# Returns list with % coverage for each sample by bin
+
+# Combine into one matrix
+coverage_matrix_less20red = do.call(rbind,bins_cov_less20red)
+
+
+min(coverage_matrix_less20red[,1])
+min(coverage_matrix_less20red[,2])
+min(coverage_matrix_less20red[,3])
+min(coverage_matrix_less20red[,4])
+min(coverage_matrix_less20red[,5])
+min(coverage_matrix_less20red[,6])
+```
+
+### 10%
+```{r}
+# Create object with sums of contig lengths for each bin in vector
+bin_lengths_less10red = vector()
+for (i in 1:87) {
+  bin_lengths_less10red[i] = as.vector(sum(bins_70comp_less10red[[i]]$V2))
+}
+
+bin_lengths_less10red[5] = as.vector(sum(bins_70comp_less10red[[i]]$V2))
+
+bin_lengths_less10red
+
+# Make coverage table
+bins_cov_less10red = list()
+for (i in 1:87) {
+  bins_cov_less10red[[i]] = colSums(idxstats_merged_2[bins_70comp_less10red[[i]][,1],]) / bin_lengths_less10red[i]
+}
+
+bins_cov_less10red
+
+# Returns list with % coverage for each sample by bin
+
+# Combine into one matrix
+coverage_matrix_less10red = do.call(rbind,bins_cov_less10red)
+
+
+min(coverage_matrix_less10red[,1])
+min(coverage_matrix_less10red[,2])
+min(coverage_matrix_less10red[,3])
+min(coverage_matrix_less10red[,4])
+min(coverage_matrix_less10red[,5])
+min(coverage_matrix_less10red[,6])
+```
+
+
+## Switch to log
+### 20%
+```{r}
+# Try taking the log (adding a pseudocount to avoid log(0))
+
+## Define function
+logpseudo <- function(x) {
+
+    log10(x + min(x[x>0], na.rm = TRUE)/2)
+
+}
+
+# Take the log of the matrix 
+log_cov_less20red <- logpseudo(coverage_matrix_less20red)
+
+# Plot
+pheatmap(log_cov_less20red)
+
+log_heatmap_less20red<- pheatmap(log_cov_less20red)
+
+pdf("log_less20red_heatmap.pdf",width=9,height=5)
+log_heatmap_less20red
+dev.off()
+```
+
+### 10%
+```{r}
+# Try taking the log (adding a pseudocount to avoid log(0))
+
+## Define function
+logpseudo <- function(x) {
+
+    log10(x + min(x[x>0], na.rm = TRUE)/2)
+
+}
+
+# Take the log of the matrix 
+log_cov_less10red <- logpseudo(coverage_matrix_less10red)
+
+# Plot
+pheatmap(log_cov_less10red)
+
+log_heatmap_less10red<- pheatmap(log_cov_less10red)
+
+pdf("log_less10red_heatmap.pdf",width=9,height=5)
+log_heatmap_less10red
+dev.off()
+```
+
+
+# Plot
+## Add sample categories
+```{r}
+# Set column names
+my_sample_col <- data.frame(sample = rep(c("Rosario_sediment","Rosario_surfacewater","Varadero_deepwater","Varadero_sediment","Varadero_surfacewater"), c(3,3,3,3,3)))
+row.names(my_sample_col) <- colnames(coverage_matrix_less20red)
+row.names(my_sample_col) <- colnames(coverage_matrix_less10red)
+
+# Set sample colors
+sample_colors = list(
+    sample = c(Varadero_deepwater = "palegreen4", Rosario_surfacewater = "#00B0F0", Varadero_surfacewater = "#FFC000", Varadero_sediment = "khaki4", Rosario_sediment = "steelblue4")
+)
+
+dastool_phylum_70mag_10red <- read.table("dastool_bin_phylum_70mag_less10red_noNone.txt",row.names = 1, col.names = "Phylum")
+dastool_order_70mag_10red <- read.table("dastool_bin_order_70mag_less10red_noNone.txt",row.names = 1, col.names = "Phylum")
+dastool_order_70mag_20red <- read.table("dastool_bin_order_70mag_less20red_noNone.txt",row.names = 1, col.names = "Phylum")
+
+
+```
+
+## 20%
+### Phylum
+```{r}
+dastool_phylum_70mag_20red <- read.table("dastool_bin_phylum_70mag_less20red_noNone.txt",row.names = 1, col.names = "Phylum")
+
+less20_rows <- read.table("dastool_rownames_less20.txt", row.names = 1)
+rownames(log_cov_less20red) = rownames(less20_rows)
+
+rows_ordered_less20 <- log_cov_less20red[rownames(dastool_phylum_70mag_20red), ]
+
+
+heatmap_phylum_20red_notordered <- pheatmap(log_cov_less20red,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_phylum_70mag_20red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_phylum_20red_notordered.pdf",width=20,height=40)
+heatmap_phylum_20red_notordered
+dev.off()
+
+rows_ordered_less20 <- log_cov_less20red[rownames(dastool_phylum_70mag_20red), ]
+heatmap_phylum_20red_ordered <- pheatmap(rows_ordered_less20,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_phylum_70mag_20red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_phylum_20red_ordered.pdf",width=20,height=40)
+heatmap_phylum_20red_ordered
+dev.off()
+
+```
+
+
+### Order
+```{r}
+dastool_order_70mag_20red <- read.table("dastool_bin_order_70mag_less20red_noNone.txt",row.names = 1, col.names = "Phylum")
+
+less20_rows <- read.table("dastool_rownames_less20.txt", row.names = 1)
+rownames(log_cov_less20red) = rownames(less20_rows)
+
+rows_ordered_less20 <- log_cov_less20red[rownames(dastool_order_70mag_20red), ]
+
+library(RColorBrewer)
+n <- 32
+qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+pie(rep(1,n), col=sample(col_vector, n))
+
+order_less20_colors <- sample(col_vector, n)
+sample_colors = list(
+    sample = c(Varadero_deepwater = "palegreen4", Rosario_surfacewater = "#00B0F0", Varadero_surfacewater = "#FFC000", Varadero_sediment = "khaki4", Rosario_sediment = "steelblue4")
+)
+
+# Assign colors to make the categories more distinct
+ Phylum = c(Acidimicrobiales = "#8DD3C7", Actinomycetales = "#FFFF99", Balneolales = "#FCCDE5", Burkholderiales = "#8DA0CB", Campylobacterales = "#FF7F00", Caulobacterales = "#F0027F", Cyanobacteriales = "#CBD5E8", Cytophagales = "#7570B3", Flavobacteriales = "#FF7F00", LC-2_class_Heimdallarchaeia = "#D95F02", Opitutales = "#FBB4AE", Parvibaculates = "#4DAF4A", PCC-6307_class_Cyanobacteriia = "#6A3D9A", Pedosphaerales = "#F781BF", Phycisphaerales = "#377EB8", Pirellulales ="#A6D854" , Planctomycetales = "#FDCDAC", Poseidoniales = "#BF5B17", Pseudomonadales = "#1B9E77", Puniceispirillales = "#E7298A", Rhodobacterales = "#33A02C", Rickettsiales = "#E31A1C", SAR324 = "#B3B3B3", SAR86_class_Gammaproteobacteria = "#386CB0", Sphingomonadales = "#BEAED4", TMED189_class_Acidimicrobiia = "#A6761D", UBA1135_phylum_Planctomycetota = "#FFFF33", UBA1146_phylum_Planctomycetota = "#FFFF33", UBA11654_class_Gammaproteobacteria = "#386CB0", UBA796_phylum_Myxococcota = "#1F78B4", UBA7985_class_Alphaproteobacteria = "#666666", Verrucomicrobiales = "#B2DF8A") 
+
+heatmap_order_20red_notordered <- pheatmap(log_cov_less20red,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_order_70mag_20red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_order_20red_notordered.pdf",width=20,height=40)
+heatmap_order_20red_notordered
+dev.off()
+
+rows_ordered_less20 <- log_cov_less20red[rownames(dastool_order_70mag_20red), ]
+heatmap_order_20red_ordered <- pheatmap(rows_ordered_less20,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_order_70mag_20red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_order_20red_ordered.pdf",width=20,height=40)
+heatmap_order_20red_ordered
+dev.off()
+
+```
+
+
+## 10%
+### Phylum
+```{r}
+dastool_phylum_70mag_10red <- read.table("mag_70comp_10red_phylum_nonone.txt",row.names = 1, col.names = "Phylum")
+
+less10_rows <- read.table("mag_70comp_10red_rownames.txt", row.names = 1)
+rownames(log_cov_less10red) = rownames(less10_rows)
+
+rows_ordered_less10 <- log_cov_less10red[rownames(dastool_phylum_70mag_10red), ]
+
+
+heatmap_phylum_10red_notordered <- pheatmap(log_cov_less10red,
+                                            annotation_row = dastool_phylum_70mag_10red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_phylum_10red_notordered.pdf",width=20,height=40)
+heatmap_phylum_10red_notordered
+dev.off()
+
+rows_ordered_less10 <- log_cov_less10red[rownames(dastool_phylum_70mag_10red), ]
+heatmap_phylum_10red_ordered <- pheatmap(rows_ordered_less10,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_phylum_70mag_10red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            cellwidth = 38,
+                                            cellheight = 10)
+pdf("heatmap_phylum_10red_ordered2_v2.pdf",width=20,height=40)
+heatmap_phylum_10red_ordered
+dev.off()
+
+
+heatmap_phylum_10red_ordered2 <- pheatmap(rows_ordered_less10,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_phylum_70mag_10red,
+                                            cluster_rows = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            cellwidth = 40,
+                                            cellheight = 20)
+pdf("heatmap_phylum_10red_ordered2_withbinnames_v2.pdf",width=20,height=40)
+heatmap_phylum_10red_ordered2
+dev.off()
+
+```
+
+### Order
+```{r}
+dastool_order_70mag_10red <- read.table("dastool_bin_order_70mag_less10red_noNone.txt",row.names = 1, col.names = "Phylum")
+
+less10_rows <- read.table("dastool_rownames_less10.txt", row.names = 1)
+rownames(log_cov_less10red) = rownames(less10_rows)
+
+rows_ordered_less0 <- log_cov_less10red[rownames(dastool_order_70mag_10red), ]
+
+
+heatmap_order_10red_notordered <- pheatmap(log_cov_less10red,
+                                            annotation_row = dastool_order_70mag_10red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_order_10red_notordered.pdf",width=20,height=40)
+heatmap_order_10red_notordered
+dev.off()
+
+rows_ordered_less10 <- log_cov_less10red[rownames(dastool_order_70mag_10red), ]
+heatmap_order_10red_ordered <- pheatmap(rows_ordered_less10,
+                                            annotation_col = my_sample_col,
+                                            annotation_row = dastool_order_70mag_10red,
+                                            cluster_rows = FALSE,
+                                            labels_row = FALSE,
+                                            annotation_colors = sample_colors,
+                                            cutree_cols = 5,
+                                            fontsize = 20,
+                                            treeheight_col = 40,
+                                            show_colnames = F,
+                                            legend = F,
+                                            cellwidth = 40,
+                                            cellheight = 7)
+pdf("heatmap_order_10red_ordered.pdf",width=20,height=40)
+heatmap_order_10red_ordered
+dev.off()
+
+```
+
+

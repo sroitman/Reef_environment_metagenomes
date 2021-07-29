@@ -1,0 +1,244 @@
+---
+title: "Reef Microbiome Metagenomes - analyzing HUMAnN3 results using MaAsLin2"
+author: "Sofia Roitman"
+date: "2/8/2021"
+output: html_document
+---
+
+# Set working directory
+```{r}
+setwd("")
+library(tidyverse)
+library(vegan)
+library(broom)
+```
+
+
+# Install MaAsLin2
+```{r}
+if(!requireNamespace("BiocManager", quietly = TRUE))
+    install.packages("BiocManager")
+BiocManager::install("Maaslin2")
+```
+
+# Read in the pathways files
+```{r}
+all_pathways <- as.data.frame(read_tsv("~/Box/METAGENOME_2020/Preprocessing/all_pathabund.tsv"))
+
+```
+
+# Re-format the data frame from wide to long format
+```{r}
+all_pathways_long <- 
+  # %>% is used to pipe the output to the next command
+  all_pathways %>% 
+  #Gather cmp by pathway and sampleID
+  gather(sampleID, cpm, -pathway) %>% 
+  #Separate by sampleID and drop any extra values without warning
+  separate(sampleID, "sampleID", sep = "_", extra = "drop") %>% 
+  #Separate pathways from organisms using |
+  separate(pathway, c("pathway", "organism"), sep = "\\|", fill = "right")
+```
+
+
+# Continue processing the humann3 output
+```{r}
+# generate pathway table with no organism stratifications
+all_pathways_no_stratifications_long <-
+  all_pathways_long %>%
+  filter(is.na(organism)) %>%
+  select(-organism) %>%
+  filter(!(grepl("^UN", pathway))) 
+
+# Compute pathway alpha divertities per sample
+all_pathways_no_stratifications_long %>%
+  group_by(sampleID) %>%
+  summarise(shannons_div = vegan::diversity(cpm),
+            num_pathways = sum(cpm>0))
+
+# generate pathway table with no organism stratifications
+all_pathways_no_stratifications_long <-
+  all_pathways_long %>%
+  filter(is.na(organism)) %>%
+  select(-organism) %>%
+  filter(!(grepl("^UN", pathway))) 
+
+# Compute pathway alpha diversities per sample
+all_pathways_no_stratifications_long %>%
+  group_by(sampleID) %>%
+  summarise(shannons_div = vegan::diversity(cpm),
+            num_pathways = sum(cpm>0)) 
+```
+
+# continue with any statistical comparisons etc.
+```{r}
+# Work with organism level stratifications
+all_pathway_stratifications_long <- 
+  all_pathways_long %>%
+  filter(!(is.na(organism))) %>%
+  filter(!(grepl("^UN", pathway))) 
+
+# number of organisms per pathway
+all_organisms_per_pathway <- 
+  all_pathway_stratifications_long %>%
+  group_by(pathway) %>%
+  summarise(num_organisms = length(unique(organism)))
+
+# average contributional alpha diverity (Gini simpson diversity) per pathway
+all_pathway_alpha_div <- 
+  all_pathway_stratifications_long %>%
+  filter(cpm > 0) %>%
+  group_by(pathway, sampleID) %>%
+  summarise(alpha_div = vegan::diversity(cpm, index = "simpson")) %>%
+  group_by(pathway) %>%
+  summarise(mean_alpha_div = mean(alpha_div),
+            median_alpha_dv = median(alpha_div)) %>%
+  arrange(-mean_alpha_div)
+
+head(humann2_pathway_alpha_div)
+```
+
+# Running Maaslin2
+```{r}
+library(Maaslin2)
+input_data <- read.delim("maaslin2_onlygenenames_transposed.tsv",sep = "\t", row.names = 1)
+input_metadata <- read.delim("~all_pathabund_meta_nosed_maaslin2_v2.tsv",sep = "\t", row.names = 1)
+
+fit_data <- Maaslin2(
+    input_data, input_metadata, 'maaslin2_genenamesonly_v1', transform = "AST",
+    fixed_effects = c('Rosario_SW',"Varadero_DW","Varadero_SW"),
+    normalization = 'NONE',
+    standardize = FALSE)
+```
+
+## Starting with raw counts, combining pathways by name, getting relative abundances, then running MAaslin on the relative abundance data.
+```{r}
+# Files do not include sediment samples as HUMAnN3 yielded no results for those
+input_data <- read.delim("all_pathabund_nonorm_rowscombined_nosed_transposed.tsv",sep = "\t", row.names = 1)
+input_metadata <- read.delim("all_pathabund_meta_nosed_maaslin2_v2.tsv",sep = "\t", row.names = 1)
+
+# Transform to relative abundance
+input_data_relative <- make_relative(as.matrix(input_data))
+write.csv(input_data_relative, file = "all_pathabund_nonorm_rowscombined_transposed_relative.csv")
+
+# Transposed version
+input_data_relative2 <- read.delim("~/Box/METAGENOME_2020/Preprocessing/all_pathabund_nonorm_rowscombined_transposed_relative.tsv",sep = "\t", row.names = 1)
+
+# Run Maaslin2
+fit_data <- Maaslin2(
+    input_data_relative2, input_metadata, 'maaslin2_pathabund_nonorm', transform = "AST",
+    fixed_effects = c('Rosario_SW',"Varadero_DW","Varadero_SW"),
+    normalization = 'NONE',
+    standardize = FALSE)
+
+```
+
+# Generating a heatmap
+## Read in files, combine the rows by the gene family column for ease of visualization
+```{r}
+library(gplots)  # for heatmap.2
+# to install packages from Bioconductor:
+library(Heatplus)
+# load the vegan package for hierachical clustering if you want to use distance functions not specified in dist.
+library(vegan)
+# load the RColorBrewer package for better colour options
+library(RColorBrewer)
+
+all.data <- read.csv("all_heatmap_genefamiliesonly.csv")  # load the data
+dim(all.data)
+all.data[1:3, 1:4]
+library(dplyr)
+all.data %>%
+  group_by(Gene_Family) %>%
+  summarise_all(sum)
+
+# Combine rows by the gene family column, then export file
+all_data_rowscombined <- dplyr::group_by(all.data, Gene_Family) %>% dplyr::summarise_all(sum)
+write.csv(all_data_rowscombined, file = "maaslin2_onlygenenames.csv")
+all.data2 <- as.data.frame(all_data_rowscombined)
+all.data3 <- subset(all.data2, select = -Gene_Family)
+
+```
+
+## Pheatmap
+```{r}
+library(pheatmap)
+pheatmap(all.data3)
+# 222 genefamilies identified, extract top 75 most abundant
+write.csv(all.data3, file = "all_genefamilies_combined.csv")
+top100 <- read.csv("all_genefamilies_combined_top100.csv")
+top75 <- read.csv("all_genefamilies_combined_top75.csv")
+top50 <- read.csv("all_genefamilies_combined_top50.csv")
+top50_path <- read.csv("all_pathonly_rel_rowscombined_top50_nounmapped.csv")
+
+# Edit row names
+row.names(top100) <- top100$X
+top100.2 <- top100[, -1]
+
+row.names(top75) <- top75$X
+top75.2 <- top75[, -1]
+
+row.names(top50) <- top50$X
+top50.2 <- top50[, -1]
+
+row.names(top50_path) <- top50_path$pathway
+top50_path.2 <- top50_path[, -1]
+
+# Edits for the heatmap in case it gets too crowded
+if (nrow(all.data3) > 100) stop("Too many rows for heatmap, who can read?!")
+fontsize_row = 10 - nrow(all.data3) / 15
+pheatmap(top75.2, fontsize_row=5, border_color=NA)
+
+# Create dataframe with different data types
+sites_df = data.frame("category" = c(rep("Varadero deepwater",1),rep("Rosario surfacewater",3),rep("Varadero surfacewater",3),rep("Varadero deepwater",2)))
+
+
+# Use above dataframe to annotate the columns of the heatmap
+annotation_col = data.frame(
+    SampleType = factor(rep(c("Varadero_deepwater", "Rosario_surfacewater", "Varadero_surfacewater"), 3))
+)
+rownames(annotation_col) = c("VDW1","RSW1","VSW1","VDW2","RSW3","VSW2","VDW3","RSW4","VSW5")
+
+# Add colors for different categories
+ann_colors = list(
+    SampleType = c(Varadero_deepwater = "palegreen4", Rosario_surfacewater = "#00B0F0", Varadero_surfacewater = "#FFC000")
+)
+
+
+# Top 75
+pheatmap_test2 = pheatmap(top75.2, annotation_col = annotation_col,annotation_colors = ann_colors)
+pdf("pheatmap_test2.pdf",width=15,height=10)
+pheatmap_test2
+dev.off()
+
+# Top 50
+pheatmap_top50 = pheatmap(top50.2, annotation_col = annotation_col,annotation_colors = ann_colors)
+pdf("pheatmap_top50.pdf",width=15,height=10)
+pheatmap_top50
+dev.off()
+
+# Using the pathabundance file instead of the genefamilies file
+pheatmap_top50_path = pheatmap(top50_path.2, 
+                               annotation_col = annotation_col,
+                               annotation_colors = ann_colors,
+                               cluster_rows = TRUE,
+                               cutree_cols = 3,
+                               fontsize = 9,
+                               treeheight_col = 40,
+                               show_colnames = T,
+                               cellwidth = 20,
+                               cellheight = 12)
+pdf("pheatmap_top50_path.pdf",width=50,height=60)
+pheatmap_top50_path
+dev.off()
+
+
+```
+
+
+
+
+
+
+
+
