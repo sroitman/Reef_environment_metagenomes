@@ -1,0 +1,75 @@
+# CORAL REEF ENVIRONMENTAL METAGENOMES: USING HUMAnN3 FOR FUNCTIONAL ANALYSIS
+
+## HUMAnN3 was installed in a conda environment using the following commands:
+conda create --name HUMAnN3 python=3.7
+conda activate HUMAnN3
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --add channels biobakery
+conda install humann -c biobakery
+conda install metaphlan -c bioconda.
+
+# The HUMAnN installation comes with small sequence and annotation databases for testing/tutorial purposes.
+## To upgrade your pangenome database:
+humann_databases --download chocophlan full humann_chocophlan --update-config yes
+## To upgrade your protein database:
+humann_databases --download uniref uniref90_diamond humann_uniref --update-config yes
+## To upgrade your annotations database:
+humann_databases --download utility_mapping full humann_utility_mapping --update-config yes
+## To profile a sample using updated databases:
+humann -i sample_reads.fastq -o sample_results
+
+
+# STEP 1: Cat the paired fastq files into single files; HUMAnN2 doesn’t accept paired end reads
+for i in `ls -1 *paired*.fastq.gz | sed 's/\_paired.fastq.gz//'`
+do
+echo zcat $i\_paired.fastq.gz >> $1.fastq
+done
+
+
+# STEP 2: Run humann on each fastq file
+for i in `ls -1 *.fastq | sed 's/\.fastq//'`
+do
+echo humann --input $i\.fastq --output $i\_humann_noaa --threads 5 --bypass-translated-search
+done
+
+# STEP 3: Add feature names to the resulting genefamilies files
+for i in `ls -1 *_humann_noaa/*_genefamilies.tsv | sed 's/\_genefamilies.tsv//'`
+do
+echo humann_rename_table --input $i\_genefamilies.tsv --output $i\_genefamilies-names.tsv -n uniref90
+done
+
+# STEP 4: Normalizing RPKs to relative abundance for genefamilies files and pathabundance files
+for i in `ls -1 *_humann_noaa/*_genefamilies-names.tsv | sed 's/\_genefamilies-names.tsv//'`
+do
+echo humann_renorm_table --input $i\_genefamilies-names.tsv --output $i\_genefamilies-names-rel.tsv --units relab --update-snames
+done
+
+for i in `ls -1 *_humann_noaa/*_pathabundance.tsv | sed 's/\_pathabundance.tsv//'`
+do
+echo humann_renorm_table --input $i\_pathabundance.tsv --output $i\_pathabundance-rel.tsv --units relab --update-snames
+done
+
+
+# STEP 5: Regrouping genes to other functional categories
+## HUMAnN's default "units" of microbial function are UniRef gene families (which we use internally to compute reaction abundances, and from there pathway abundances). However, starting from gene family abundance, it is possible to reconstruct the abundance of other functional categories in a microbiome using the humann_regroup_table script.
+## Regroup to enzyme commission (EC) categories:
+for i in `ls -1 *_humann_noaa/*_genefamilies-names-rel.tsv | sed 's/\_genefamilies-names-rel.tsv//'`
+do
+echo humann_regroup_table --input $i\_genefamilies-names-rel.tsv --output $i\_level4ec-rel.tsv --groups uniref90_level4ec
+done
+
+
+# STEP 6: Attach human-readable descriptions to IDs to facilitate biological interpretation. 
+for i in `ls -1 *_humann_noaa/*_level4ec-rel.tsv | sed 's/\_level4ec-rel.tsv//'`
+do
+echo humann_rename_table --input $i\_level4ec-rel.tsv --output $i\_level4ec-rel-named.tsv --names ec
+done
+
+
+# STEP 7: Merge together so that we can compare samples
+humann_join_tables --input all_pathabund_tables/ --output all_pathabund_tables/all_pathabund.tsv
+humann_join_tables --input all_genefamilies_rel/ --output all_genefamilies_rel/all_genefamilies_rel.tsv
+humann_join_tables --input all_pathabund_rel/ --output all_pathabund_rel/all_pathabund_rel.tsv
+humann_join_tables --input all_pathabund_nonorm/ --output all_pathabund_nonorm/all_pathabund_nonorm.tsv
