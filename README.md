@@ -1,5 +1,5 @@
 # Metagenomic analysis of reef environment microbiome
-#
+
 This repository contains all of the code associated with and the analyses performed for: Roitman, S., López-Londoño, T., Shantz, A., Iglesias-Prieto, R., Leventhal, G., Medina, M.  Metagenomic analysis of environmental samples from an anthropogenically impacted reef. (in preparation)
 #
 The Reef_Environment_Metagenomes_BinningVisualizationAnvio_Procedure.txt file outlines the procedure followed to trim, assemble, bin, and visualize the metagenomes using Anvi'o. 
