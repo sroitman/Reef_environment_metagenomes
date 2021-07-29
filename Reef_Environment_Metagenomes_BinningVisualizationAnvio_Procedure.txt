@@ -1,0 +1,195 @@
+# CORAL REEF ENVIRONMENTAL METAGENOMES: BINNING AND VISUALIZATION USING ANVI'O
+
+## Sample set: 3 surface water samples from Rosario Reef (RSW) and Varadero Reef (VSW) respectively, 3 deep water samples from Varadero Reef (VDW), and 3 sediment samples from Rosario Reef (RS) and Varadero Reef (VS) respectively.
+
+# STEP 1: Using Trimmomatic to trim adapters and clean sequences
+
+## Output: per sample, there is a fastq.gz of paired forward, paired reverse, unpaired forward and unpaired reverse.
+### For loop for running Trimmomatic on multiple paired end files:
+
+for i in `ls -1 *R1_001*.fastq.gz | sed 's/\_R1_001.fastq.gz//'`
+do 
+trimmomatic PE -phred33 $i\_R1_001.fastq.gz $i\_R2_001.fastq.gz $i\_R1_001_paired.fastq.gz $i\_R1_001_unpaired.fastq.gz $i\_R2_001_paired.fastq.gz $i\_R2_001_unpaired.fastq.gz ILLUMINACLIP:trimmomatic/adapters/NexteraPE-PE.fa:2:30:10 LEADING:3 TRAILING:3 SLIDINGWINDOW:10:20 MINLEN:36
+done
+
+
+# STEP 2: Metagenome co-assembly using MEGAHIT v 1.2.2
+
+## Unlike metaSPAdes, which only takes the forward and reverse pairs and needs to separate files for each, MEGAHIT takes all the files and can read them in as separate. However, they do have to be in a comma separated list.
+
+## To make a comma separated list, we use this command:
+ls *_R1_001_paired.fastq.gz | paste -sd, -
+ls *_R2_001_paired.fastq.gz | paste -sd, -
+
+## We have to make a BASH variable with it. Here is the list of BASH variables to be made:
+FORWARD_READS=$( ls *_R1_001_paired.fastq.gz | paste -sd, - )
+REVERSE_READS=$( ls *_R2_001_paired.fastq.gz | paste -sd, - )
+UNPAIRED_READS=$( ls *_unpaired.fastq.gz | paste -sd, - )
+
+## Megahit command:
+MEGAHIT-1.2.2-beta-Linux-static/bin/megahit -t 24 \
+  --min-count 3 --k-min 27 --k-max 127 --k-step 10 —-memory 0.7 \
+  -1 $FORWARD_READS \
+  -2 $REVERSE_READS \
+  -r $UNPAIRED_READS \
+  -o megahit_output
+
+## Quality checking using QUAST
+quast megahit_output/final.contigs.fa \
+               -o quast_out/ \
+               -t 15
+
+# STEP 3: Prepping for Anvi'o
+
+## Anvi'o requires a specific format for the input files, which these files are not originally in. Running anvi-script-reformat-fasta to fix this.
+anvi-script-reformat-fasta all_assembly/all_final.contigs.fa -o all_contigs-fixed.fa -l 0 --simplify-names
+
+## Indexing
+bwa index all_contigs-fixed.fa
+
+
+## Mapping reads to contigs by sample
+for i in `ls -1 *R1_001_paired*.fastq.gz | sed 's/\_R1_001_paired.fastq.gz//'`
+do 
+bwa mem -t 8 all_contigs-fixed.fa $i\_R1_001_paired.fastq.gz $i\_R2_001_paired.fastq.gz > all_binning/$i\.aln.sam
+done
+
+
+## Convert files to BAM
+samtools faidx all_contigs-fixed.fa
+cp all_contigs-fixed.fa.sam all_binning/
+
+
+## Convert all SAM files to BAM files within each _binning folder.
+for i in *.sam
+  do
+    samtools import all_contigs-fixed.fa $i $i.bam
+    samtools sort $i.bam $i.bam.sorted
+    samtools index $i.bam.sorted.bam
+  done
+
+## Get a count of the total number of reads mapping to each contig
+for i in *sorted.bam
+  do
+    samtools idxstats $i > $i.idxstats
+    cut -f1,3 $i.idxstats > $i.counts
+  done
+
+
+# STEP 4: Create contigs database
+
+## The following is the simplest way of creating a contigs database:
+anvi-gen-contigs-database -f all_contigs-fixed.fa -o all_contigs-fixed.db --num-threads 20 -n 'All contigs database'
+
+## Decorate contigs database with hits from HMM models that ship with the platform
+anvi-run-hmms --num-threads 20 -c all_contigs-fixed.db
+
+
+## Run anvi-display-contigs-stats to take a look at the database
+anvi-display-contigs-stats all_contigs-fixed.db
+
+
+## Run anvi-run-ncbi-cogs to annotate genes in the contigs database with functions from the NCBI’s Clusters of Orthologus Groups
+anvi-setup-ncbi-cogs --num-threads 20
+anvi-run-ncbi-cogs -c all_contigs-fixed.db --num-threads 20
+
+
+
+# STEP 5: Adding taxonomy information using Kaiju
+
+anvi-get-sequences-for-gene-calls -c all_contigs-fixed.db -o all_gene_calls.fa
+
+## Download Kaiju
+wget https://github.com/bioinformatics-centre/kaiju/releases/download/v1.7.2/kaiju-1.7.2-linux-x86_64.tar.gz
+tar -xvf kaiju-1.7.2-linux-x86_64.tar.gz
+
+## Choosing between:
+## mar_ref, mar_db, mar_mag: individual marine reference databases or assembled genomes from the Marine Metagenomics Portal                         
+## Chose: mar: combination of all three MAR databases
+
+kaiju-v1.7.2-linux-x86_64-static/bin/kaiju-makedb -s mar -t 20
+kaiju-v1.7.2-linux-x86_64-static/bin/kaiju -t kaijudb/nodes.dmp -f kaijudb/mar/kaiju_db_mar.fmi -i all_gene_calls.fa -o all_gene_calls_mar.out -z 16 -v
+kaiju-v1.7.2-linux-x86_64-static/bin/kaiju-addTaxonNames -t kaijudb/nodes.dmp -n kaijudb/names.dmp -i all_gene_calls_mar.out -o all_gene_calls_mar.names -r superkingdom,phylum,order,class,family,genus,species
+
+
+## Get the Kaiju taxonomic profile into the contigs database
+anvi-import-taxonomy-for-genes -i all_gene_calls_mar.names \
+                               -c all_contigs-fixed.db \
+                               -p kaiju
+
+
+# STEP 6: Create sample profiles
+## Created a list called SAMPLE_IDs_edited containing all sample names, then ran:
+for sample in `cat SAMPLE_IDs_edited`; do anvi-init-bam -T 20 $sample-RAW.bam -o $sample.bam; done
+
+## Run anvi-profile on sorted and indexed files
+for i in `ls -1 *aln*.sam.bam.sorted.bam.bai | sed 's/\_aln.sam.bam.sorted.bam.bai//'`
+do 
+echo anvi-profile -i $i\_aln.sam.bam.sorted.bam.bai -c all_contigs-fixed.db
+done
+
+
+## Next, merge all anvi’o profiles.
+anvi-merge *.bai-ANVIO_PROFILE/PROFILE.db -o ALL-SAMPLES-MERGED -c all_contigs-fixed.db
+
+
+
+# STEP7: Binning
+
+## First, export necessary information from the Anvi'o profile created in the last step
+anvi-export-splits-and-coverages -p ALL-SAMPLES-MERGED/PROFILE.db -c all_contigs-fixed.db -o anvio_splits_coverages -O all
+### Outputs:
+### Coverage file: anvio_splits_coverages/all-COVs.txt
+### Sequences file: anvio_splits_coverages/all-SPLITS.fa
+
+## Binning with CONCOCT
+concoct --coverage_file anvio_splits_coverages/all-COVs.txt \
+        --composition_file anvio_splits_coverages/all-SPLITS.fa \
+        --basename anvio_concoct_out \
+        --threads 20
+
+### Extracting CONCOCT bins
+extract_fasta_bins.py anvio_splits_coverages/all-SPLITS.fa anvio_concoct_out/clustering_gt1000.csv --output_path anvio_concoct_out/fasta_bins_nomerge/
+
+### Converting to scaffolds in order to be able to integrate the data in with the Anvi'o database
+bash Fasta_to_Scaffolds2Bin.sh -e fa -i anvio_concoct_out/fasta_bins_nomerge/ > anvio_concoct_scaffolds2bin.tsv
+
+
+## Binning with Metabat2
+metabat2 -i anvio_splits_coverages/all-SPLITS.fa \
+         -a anvio_splits_coverages/all-COVs.txt \
+         -o METABAT_ \
+         --cvExt \
+         -t 15
+
+### Converting to scaffolds in order to be able to integrate the data in with the Anvi'o database
+bash Fasta_to_Scaffolds2Bin.sh -e fa -i anvio_metabat_bins/ > anvio_metabat_scaffolds2bin.tsv
+
+## Using DASTool to extract a set of high-quality and non-redundant bins from both binning programs' results
+DAS_Tool -i ./anvio_concoct_scaffolds2bin.tsv,./anvio_metabat_scaffolds2bin.tsv -l concoct,metabat -c anvio_splits_coverages/all-SPLITS.fa -o ANVIO_DASTOOL --write_bins 1 --search_engine diamond -t 15
+
+## Script to convert DASTool results to Anvi'o. Credit: (no longer available on github?)
+#!/bin/bash
+# A simple script to convert DASTool results to anvio
+# First, navigate to the folder that contains your DASTool bins
+FILES=$(find *.fa)
+for f in $FILES; do
+ NAME=$(basename $f .fa)
+ grep ">" $f | sed 's/>//' | sed -e "s/$/\t$NAME/" | sed 's/\./_/' >> dastool4anvio2.txt
+done
+
+## Import DASTool bins into Anvi'o
+anvi-import-collection ANVIO_DASTOOL_DASTool_bins/dastool4anvio2.txt -p ALL-SAMPLES-MERGED/PROFILE.db -c all_contigs-fixed.db -C DASTOOL
+
+## Assign taxonomy to bins
+anvi-setup-scg-taxonomy
+anvi-run-scg-taxonomy -c all_contigs-fixed.db --num-parallel-processes 3 --num-threads 4
+anvi-estimate-scg-taxonomy -c all_contigs-fixed.db -p ALL-SAMPLES-MERGED/PROFILE.d -C DASTOOL -T 20
+
+
+
+## All work was performed within Medina Lab servers. To visualize the Anvi'o database, create an SSH tunnel with local and remote port forwarding. Run the interactive interface on the server
+ssh -L 8080:127.0.0.1:8080 sofia@server.psu.edu
+anvi-interactive -p ALL-SAMPLES-MERGED/PROFILE.db -c all_contigs-fixed.db -s SAMPLES.db --server-only -P 8080
+## OR
+anvi-interactive -p ALL-SAMPLES-MERGED/PROFILE.db -c all_contigs-fixed.db -C DASTOOL --server-only -P 8080
